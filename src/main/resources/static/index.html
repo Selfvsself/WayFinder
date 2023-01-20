@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Way finder</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+</head>
+<body>
+    <div>
+        <span>Строки&nbsp;&nbsp;&nbsp;:</span>
+        <input type="number" id="lines" required
+            minlength="1" maxlength="2" value = "5">
+    </div>
+    <div>
+        <span>Столбцы:</span>
+        <input type="number" id="rows" required
+            minlength="1" maxlength="2" value="5">
+    </div>
+    <div>
+        <button onclick = "clearAllCells()">Очистить клетки</button>
+        <button onclick = "clearWays()">Удалить Путь</button>
+    </div>
+    <div id="map">
+    </div>
+    <div>
+        <button onclick = "submit()">Посчитать путь</button>
+    </div>
+    <div id="result_map"></div>
+    <div>
+        <div class="text">Левая кнопка - поменять тип клетки</div>
+        <div class="text">Правая кнопка - очистить тип клетки</div>
+        <div class="text"><button class="b-cell-test"></button> Обычная клетка по которой можно пройти</div>
+        <div class="text"><button class="b-cell-test start-cell-test"></button>Старт - здесь начинается путь</div>
+        <div class="text"><button class="b-cell-test finish-cell-test"></button>Финиш - сюда должен быть проложен маршрут</div>
+        <div class="text"><button class="b-cell-test stop-cell-test"></button>Стена - не проходимая клетка</div>
+        <div class="text"><button class="b-cell-test way-cell-test"></button>Путь - показывает клетки по которым проходит маршрут</div>
+    </div>
+</body>
+<script type="text/javascript">
+    const linesElem = document.getElementById("lines");
+    var lines = linesElem.value;
+    linesElem.addEventListener('change', (event) => {
+        lines = event.target.value;
+        drawMap(rows, lines);});
+    const rowsElem = document.getElementById("rows");
+    var rows = rowsElem.value;
+    rowsElem.addEventListener('change', (event) => {
+        rows = event.target.value;        
+        drawMap(rows, lines);});
+</script>
+<script type="text/javascript">
+    const mapContainer = document.getElementById("map");
+    function drawMap(x, y) {
+        const table = document.createElement("table");
+        const tbody = document.createElement("tbody");
+        for (var i = 0; i < y; i++) {
+            const line = document.createElement("tr");
+            for (var j = 0; j < x; j++) {
+                const row = document.createElement("td");
+                const btn = document.createElement("button");
+                btn.classList.add("b-cell");
+                btn.setAttribute("line", i);
+                btn.setAttribute("row", j);
+                btn.setAttribute("id", j+'_'+i);
+                btn.addEventListener('click', changeState);
+                btn.addEventListener("contextmenu", e => e.preventDefault());
+                btn.addEventListener('contextmenu', clearState, false);
+                row.appendChild(btn);
+                line.appendChild(row);
+            }
+            tbody.appendChild(line);
+        }
+        table.appendChild(tbody);
+        mapContainer.innerHTML = "";
+        mapContainer.appendChild(table);
+    };
+    drawMap(rows, lines);
+    function changeState() {
+        if (document.querySelectorAll(".start-cell").length === 0){
+            this.classList.remove("start-cell", "finish-cell", "stop-cell", "way-cell");
+            this.classList.add("start-cell");
+        } else if (document.querySelectorAll(".finish-cell").length === 0){
+            this.classList.remove("start-cell", "finish-cell", "stop-cell", "way-cell");
+            this.classList.add("finish-cell");
+        } else if (this.classList.contains("stop-cell")){
+            this.classList.remove("start-cell", "finish-cell", "stop-cell", "way-cell");
+        } else {
+            this.classList.remove("start-cell", "finish-cell", "stop-cell", "way-cell");
+            this.classList.add("stop-cell");
+        }
+    }
+    function clearState() {
+        this.classList.remove("start-cell", "finish-cell", "stop-cell", "way-cell");
+        return false;
+    }
+    function clearAllCells() {
+        document.querySelectorAll(".b-cell").forEach(el => el.classList.remove("start-cell", "finish-cell", "stop-cell","way-cell"));
+        return false;
+    }
+    function clearWays() {
+        document.querySelectorAll(".b-cell").forEach(el => el.classList.remove("way-cell"));
+        return false;
+    }
+    function coloringCell(ids) {
+        document.querySelectorAll(".b-cell").forEach(el => {
+            el.classList.remove("way-cell");
+            const id = el.getAttribute("id");
+            console.log(ids);
+            console.log(ids.includes(id));
+            if (ids.includes(id)) {
+                if (!el.classList.contains("start-cell") &&
+                    !el.classList.contains("finish-cell") &&
+                    !el.classList.contains("stop-cell")) {
+                    el.classList.add("way-cell");
+                }
+            }
+        });
+    }
+    function submit() {
+        var requestBody = [];
+        document.querySelectorAll(".b-cell").forEach(el => {
+            const row = el.getAttribute("row");
+            const line = el.getAttribute("line");
+            const idValue = el.getAttribute("id");
+            const isStart = el.classList.contains("start-cell");
+            const isFinish = el.classList.contains("finish-cell");
+            const isStop = el.classList.contains("stop-cell");
+            const cellObject = { id: idValue, x: row, y: line, start: isStart, finish: isFinish, stop: isStop };
+            requestBody.push(cellObject);
+        });
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/map", true);
+        xhr.setRequestHeader("Content-type", "application/json");
+        xhr.send(JSON.stringify(requestBody));
+        clearWays()
+        xhr.onreadystatechange = () => {
+            console.log(xhr);
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                const result = JSON.parse(xhr.response);
+                coloringCell(result);
+                result_map.innerText = "Успешно, путь пройден за " + (result.length - 1) + " шагов";
+            } else if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 400) {
+                result_map.innerText = 'Нужно добавить Старт или Финиш';
+            } else {
+                result_map.innerText = 'Ошибка!';
+            }
+        }
+    }
+</script>
+
+<script>
+    /*
+    const map = document.getElementById("map");
+    const result_map = document.getElementById("result_map");
+    map.innerHTML = 'Map';
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/map", true);
+    xhr.setRequestHeader("Content-type", "application/json");
+    xhr.send(JSON.stringify({ title: 'ttt'}));
+
+    xhr.onreadystatechange = () => {
+        console.log(xhr);
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+            result_map.innerHTML = xhr.responseText;
+        } else {
+            result_map.innerHTML = 'Error!';
+        }
+    }
+    */
+</script>
+</html>

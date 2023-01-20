@@ -1,0 +1,43 @@
+body {
+	font: 1.2em "JetBrains Mono", sans-serif;
+}
+.b-cell {
+	width: 2em;
+	height: 2em;
+}
+.start-cell {
+	background-color:  lightskyblue;
+}
+.finish-cell {
+	background-color:  limegreen;
+}
+.stop-cell {
+	background-color:  darkslategray;
+}
+.way-cell {
+	background-color:  lightpink;
+}
+.text {
+	font-size: 0.8em;
+}
+div {
+	padding-top: 0.5em;	
+}
+
+
+.b-cell-test {
+	width: 2em;
+	height: 2em;
+}
+.start-cell-test {
+	background-color:  lightskyblue;
+}
+.finish-cell-test {
+	background-color:  limegreen;
+}
+.stop-cell-test {
+	background-color:  darkslategray;
+}
+.way-cell-test {
+	background-color:  lightpink;
+}
